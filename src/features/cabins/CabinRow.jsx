@@ -1,9 +1,9 @@
 import styled from "styled-components";
 import PropTypes from "prop-types";
 import { formatCurrency } from "../../utils/helpers";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { deleteCabin } from "../../services/apiCabins";
-import toast from "react-hot-toast";
+import React from "react";
+import CreateCabinForm from "./CreateCabinForm";
+import { useDeletecabin } from "./useDeleteCabin";
 
 const TableRow = styled.div`
   display: grid;
@@ -45,6 +45,9 @@ const Discount = styled.div`
 `;
 
 function CabinRow({ cabin }) {
+  const [showForm, setShowForm] = React.useState(false);
+  const { isDeleting, deleteCabin } = useDeletecabin();
+
   const {
     id: cabinId,
     name,
@@ -54,31 +57,27 @@ function CabinRow({ cabin }) {
     discount,
   } = cabin;
 
-  const queryClient = useQueryClient();
-
-  const { mutate: deleteCabinMutation } = useMutation({
-    mutationFn: (id) => deleteCabin(id),
-    onSuccess: () => {
-      toast.success("cabin deleted successfully");
-
-      queryClient.invalidateQueries({ queryKey: ["cabins"] });
-    },
-    onError: (error) => {
-      toast.error(`Error deleting cabin: ${error.message}`);
-    },
-  });
-
   return (
-    <TableRow>
-      <Img src={imageUrl} alt={`Image of ${name}`} />
-      <Cabin>{name}</Cabin>
-      <div>{maxCapacity} persons</div>
-      <Price>${formatCurrency(regularPrice)}</Price>
-      <Discount>{discount ? `${discount}% off` : "—"}</Discount>
-      <button onClick={() => deleteCabinMutation(cabinId)} disabled={false}>
-        Delete
-      </button>
-    </TableRow>
+    <>
+      <TableRow>
+        <Img src={imageUrl} alt={`Image of ${name}`} />
+        <Cabin>{name}</Cabin>
+        <div>{maxCapacity} persons</div>
+        <Price>${formatCurrency(regularPrice)}</Price>
+        {discount ? (
+          <Discount>{discount}% off</Discount>
+        ) : (
+          <Discount>—</Discount>
+        )}
+        <div>
+          <button onClick={() => setShowForm((show) => !show)}>Edit</button>
+          <button onClick={() => deleteCabinMutation(cabinId)} disabled={false}>
+            Delete
+          </button>
+        </div>
+      </TableRow>
+      {showForm && <CreateCabinForm cabin={cabin}></CreateCabinForm>}
+    </>
   );
 }
 

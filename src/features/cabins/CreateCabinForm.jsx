@@ -1,38 +1,39 @@
+import PropTypes from "prop-types";
 import Input from "../../ui/Input";
 import Form from "../../ui/Form";
 import Button from "../../ui/Button";
 import FileInput from "../../ui/FileInput";
 import Textarea from "../../ui/Textarea";
 import { useForm } from "react-hook-form";
-import { useMutation } from "@tanstack/react-query";
-import { toast } from "react-hot-toast";
-import { createCabin } from "../../services/apiCabins";
-import { useQueryClient } from "@tanstack/react-query";
 import FormRow from "../../ui/FormRow.jsx";
+import { useCreateCabin } from "./useCreateCabin.js";
+import { useEditCabin } from "./useEditCabin.js";
 
-function CreateCabinForm() {
-  const { register, handleSubmit, reset, getValues, formState } = useForm();
-  const queryClient = useQueryClient();
+function CreateCabinForm({ cabin = {} }) {
+  const { id: editId, ...editValues } = cabin;
+  const isEditMode = Boolean(editId);
+
+  const { register, handleSubmit, reset, getValues, formState } = useForm({
+    defaultValues: isEditMode ? editValues : {},
+  });
   const { errors } = formState;
-
   console.log("Form errors:", errors);
 
-  const { mutate, isLoading } = useMutation({
-    mutationFn: createCabin,
-    onSuccess: () => {
-      toast.success("Cabin created successfully!");
-      queryClient.invalidateQueries({ queryKey: ["cabins"] });
-      reset();
-    },
-    onError: (error) => {
-      toast.error(error.message);
-    },
-  });
+  const { isCreating, createCabin } = useCreateCabin();
+  const { editCabin, isEditing } = useEditCabin();
+
+  const isWorking = isCreating || isEditing;
 
   function onSubmit(data) {
-    mutate({ ...data, image: data.image[0] });
+    if (isEditMode) {
+      editCabin(
+        { ...data, image: data.image[0] },
+        { onSuccess: () => reset() }
+      );
+    } else {
+      createCabin({ ...data, image: data.image[0] });
+    }
   }
-
   function onError(errors) {
     console.log("Form errors:", errors);
   }
@@ -96,7 +97,9 @@ function CreateCabinForm() {
         <FileInput
           id="image"
           accept="image/*"
-          {...register("image", { required: "This field is required" })}
+          {...register("image", {
+            required: isEditMode ? false : "This field is required",
+          })}
         />
       </FormRow>
 
@@ -105,12 +108,16 @@ function CreateCabinForm() {
         <Button variation="secondary" type="reset">
           Cancel
         </Button>
-        <Button disabled={isLoading || formState.isSubmitting}>
-          Add cabin
+        <Button disabled={isWorking || formState.isSubmitting}>
+          {isEditMode ? "Update Cabin" : "Create Cabin"}
         </Button>
       </FormRow>
     </Form>
   );
 }
+
+CreateCabinForm.propTypes = {
+  cabin: PropTypes.object,
+};
 
 export default CreateCabinForm;

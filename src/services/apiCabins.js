@@ -13,13 +13,25 @@ export async function getCabins() {
   return data ?? [];
 }
 
-export async function createCabin(cabinData) {
-  const imageName = `${Date.now()}_${cabinData.image.name}`.replaceAll("/", "");
-  const imagePath = `${supabaseUrl}/storage/v1/object/public/cabin-images/${imageName}`;
+export async function createEditCabin(cabinData, id = null) {
+  const hasImagePath = cabinData?.image?.startsWith?.(supabaseUrl);
 
-  const { data, error } = await supabase
-    .from("cabins")
-    .insert([{ ...cabinData, image: imagePath }]);
+  const imageName = `${Date.now()}_${cabinData.image.name}`.replaceAll("/", "");
+  const imagePath = hasImagePath
+    ? cabinData.image
+    : `${supabaseUrl}/storage/v1/object/public/cabin-images/${imageName}`;
+
+  let query = supabase.from("cabins");
+
+  if (!id) {
+    query = query.insert([{ ...cabinData, image: imagePath }]);
+  }
+
+  if (id) {
+    query.update({ ...cabinData, image: imagePath }).eq("id", id);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("Error creating cabin:", error);
